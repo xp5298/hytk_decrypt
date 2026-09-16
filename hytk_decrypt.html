@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>行业调控 - SM4解密工具</title>
+    <script src="./crypto-js.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #f0f2f5;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 900px;
+            width: 100%;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        .header h1 {
+            font-size: 28px;
+            color: #1a1a2e;
+            font-weight: 700;
+        }
+        .header p {
+            color: #666;
+            margin-top: 8px;
+            font-size: 14px;
+        }
+        .card {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+            padding: 28px 32px;
+            margin-bottom: 20px;
+        }
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1a1a2e;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .card-title .badge {
+            display: inline-block;
+            background: #e6f7ff;
+            color: #1890ff;
+            font-size: 12px;
+            padding: 2px 10px;
+            border-radius: 10px;
+            font-weight: 500;
+        }
+        .form-group {
+            margin-bottom: 16px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 6px;
+        }
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #d9d9d9;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #333;
+            background: #fafafa;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            outline: none;
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+        }
+        .form-group input:focus,
+        .form-group textarea:focus {
+            border-color: #1890ff;
+            box-shadow: 0 0 0 3px rgba(24, 144, 255, 0.1);
+            background: #fff;
+        }
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 16px;
+        }
+        .form-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 8px;
+        }
+        .btn {
+            padding: 10px 28px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: #1890ff;
+            color: #fff;
+        }
+        .btn-primary:hover {
+            background: #40a9ff;
+            transform: translateY(-1px);
+        }
+        .btn-primary:active {
+            background: #096dd9;
+            transform: translateY(0);
+        }
+        .btn-primary:disabled {
+            background: #91caff;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #333;
+            border: 1px solid #d9d9d9;
+        }
+        .btn-secondary:hover {
+            background: #e8e8e8;
+        }
+        .secret-key-box {
+            background: #f6f8fa;
+            border: 1px solid #e8e8e8;
+            border-radius: 8px;
+            padding: 14px 16px;
+            word-break: break-all;
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+            font-size: 13px;
+            color: #333;
+            min-height: 48px;
+            display: flex;
+            align-items: center;
+        }
+        .secret-key-box .placeholder {
+            color: #bbb;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        .result-section {
+            margin-top: 20px;
+        }
+        .result-section.hidden {
+            display: none;
+        }
+        .result-label {
+            font-size: 13px;
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        .result-output {
+            background: #1a1a2e;
+            border-radius: 8px;
+            padding: 16px;
+            min-height: 80px;
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+            font-size: 13px;
+            color: #a5d6ff;
+            white-space: pre-wrap;
+            word-break: break-all;
+            line-height: 1.6;
+        }
+        .result-output .error {
+            color: #ff6b6b;
+        }
+        .result-output .empty {
+            color: #555;
+            font-style: italic;
+        }
+        .info-note {
+            font-size: 12px;
+            color: #999;
+            margin-top: 12px;
+            padding: 12px 16px;
+            background: #fafafa;
+            border-radius: 8px;
+            border-left: 3px solid #1890ff;
+            line-height: 1.8;
+        }
+        .info-note code {
+            background: #f0f0f0;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+        }
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #fff;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            vertical-align: middle;
+            margin-right: 6px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>行业调控 SM4解密工具</h1>
+            <p>基于 HytkUtil.java 逻辑实现 · 输入 sysCode / token / method / data 进行解密</p>
+        </div>
+
+        <!-- 输入区 -->
+        <div class="card">
+            <div class="card-title">
+                参数输入
+                <span class="badge">必填</span>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="sysCode">sysCode</label>
+                    <input type="text" id="sysCode" placeholder="例如：chuzhYX" value="chuzhYX">
+                </div>
+                <div class="form-group">
+                    <label for="method">method</label>
+                    <input type="text" id="method" placeholder="例如：selectUsOrderInfo" value="selectUsOrderInfo">
+                </div>
+                <div class="form-group">
+                    <label for="token">token</label>
+                    <input type="text" id="token" placeholder="由打扫码系统分配">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="data">data（待解密的密文，十六进制字符串）</label>
+                <textarea id="data" rows="3" placeholder="例如：0423451a2b3c...（SM4加密后的十六进制字符串）"></textarea>
+            </div>
+
+            <div class="form-actions">
+                <button class="btn btn-primary" id="decryptBtn">解密</button>
+                <button class="btn btn-secondary" id="clearBtn">清空</button>
+            </div>
+        </div>
+
+        <!-- SecretKey 展示 -->
+        <div class="card">
+            <div class="card-title">
+                生成的 SecretKey
+                <span class="badge">sysCode + method + yyyyMMdd + token → MD5 → 大写</span>
+            </div>
+            <div class="secret-key-box" id="secretKeyDisplay">
+                <span class="placeholder">填写参数后，点击「解密」自动生成</span>
+            </div>
+        </div>
+
+        <!-- 解密结果 -->
+        <div class="card">
+            <div class="card-title">
+                解密结果
+                <span class="badge">SM4/ECB/PKCS5Padding</span>
+            </div>
+            <div class="result-section" id="resultSection">
+                <div class="result-output" id="resultOutput">
+                    <span class="empty">等待解密...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 说明 -->
+        <div class="info-note">
+            <strong>算法说明</strong><br>
+            1. <strong>生成 SecretKey</strong>：<code>secretKey = MD5(sysCode + method + yyyyMMdd + token).toUpperCase()</code>（取前32个字符）<br>
+            2. <strong>解密</strong>：使用 SM4/ECB/PKCS5Padding 算法，将 secretKey 作为十六进制密钥解码后解密 data（data 为十六进制字符串）<br>
+            3. 实现参考：<code>HytkUtil.java</code>（BouncyCastle SM4）
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            // ============================================================
+            //  SM4 ECB PKCS5Padding 纯 JS 实现 (基于 CryptoJS)
+            // ============================================================
+
+            /**
+             * 将十六进制字符串转为 CryptoJS 的 WordArray
+             */
+            function hexToWordArray(hexStr) {
+                return CryptoJS.enc.Hex.parse(hexStr);
+            }
+
+            /**
+             * 将 CryptoJS 的 WordArray 转为 UTF-8 字符串
+             */
+            function wordArrayToUtf8(wordArray) {
+                return CryptoJS.enc.Utf8.stringify(wordArray);
+            }
+
+            /**
+             * 将 UTF-8 字符串转为 CryptoJS 的 WordArray
+             */
+            function utf8ToWordArray(str) {
+                return CryptoJS.enc.Utf8.parse(str);
+            }
+
+            /**
+             * SM4 ECB 模式解密
+             * @param {string} cipherHex - 十六进制密文
+             * @param {string} keyHex - 十六进制密钥（取前32个十六进制字符 = 16字节）
+             * @returns {string} 解密后的 UTF-8 字符串
+             */
+            function sm4Decrypt(cipherHex, keyHex) {
+                // 密钥取前32个十六进制字符（16字节）
+                if (keyHex.length > 32) {
+                    keyHex = keyHex.substring(0, 32);
+                }
+
+                const key = hexToWordArray(keyHex);
+                const ciphertext = hexToWordArray(cipherHex);
+
+                // 使用 CryptoJS.SM4 进行 ECB 模式解密，PKCS5Padding
+                // CryptoJS 的 SM4 实现通过 mode: CryptoJS.mode.ECB, padding: CryptoJS.pad.Pkcs7
+                const decrypted = CryptoJS.SM4.decrypt(
+                    { ciphertext: ciphertext },
+                    key,
+                    {
+                        mode: CryptoJS.mode.ECB,
+                        padding: CryptoJS.pad.Pkcs7
+                    }
+                );
+
+                return wordArrayToUtf8(decrypted);
+            }
+
+            /**
+             * 生成 SecretKey（与 Java HytkUtil.getSecretKey 一致）
+             * secretKey = MD5(sysCode + method + yyyyMMdd + token).toUpperCase()
+             */
+            function generateSecretKey(sysCode, method, token) {
+                const now = new Date();
+                const yyyy = now.getFullYear();
+                const mm = String(now.getMonth() + 1).padStart(2, '0');
+                const dd = String(now.getDate()).padStart(2, '0');
+                const dateStr = yyyy + mm + dd;
+
+                const raw = sysCode + method + dateStr + token;
+                const md5 = CryptoJS.MD5(raw).toString(CryptoJS.enc.Hex).toUpperCase();
+                return md5;
+            }
+
+            // ============================================================
+            //  DOM 绑定
+            // ============================================================
+
+            const sysCodeInput = document.getElementById('sysCode');
+            const methodInput = document.getElementById('method');
+            const tokenInput = document.getElementById('token');
+            const dataInput = document.getElementById('data');
+            const decryptBtn = document.getElementById('decryptBtn');
+            const clearBtn = document.getElementById('clearBtn');
+            const secretKeyDisplay = document.getElementById('secretKeyDisplay');
+            const resultOutput = document.getElementById('resultOutput');
+
+            function decrypt() {
+                const sysCode = sysCodeInput.value.trim();
+                const method = methodInput.value.trim();
+                const token = tokenInput.value.trim();
+                const data = dataInput.value.trim();
+
+                // 校验必填项
+                if (!sysCode || !method || !token || !data) {
+                    resultOutput.innerHTML = '<span class="error">请填写所有必填参数（sysCode、method、token、data）。</span>';
+                    secretKeyDisplay.innerHTML = '<span class="placeholder">填写参数后，点击「解密」自动生成</span>';
+                    return;
+                }
+
+                // 生成 SecretKey
+                const secretKey = generateSecretKey(sysCode, method, token);
+                secretKeyDisplay.textContent = secretKey;
+
+                try {
+                    // 执行 SM4 解密
+                    const decoded = sm4Decrypt(data, secretKey);
+                    resultOutput.textContent = decoded;
+                } catch (e) {
+                    resultOutput.innerHTML = '<span class="error">解密失败：' + escapeHtml(e.message || e) + '</span>';
+                }
+            }
+
+            function escapeHtml(str) {
+                const div = document.createElement('div');
+                div.textContent = str;
+                return div.innerHTML;
+            }
+
+            function clearAll() {
+                sysCodeInput.value = 'chuzhYX';
+                methodInput.value = 'selectUsOrderInfo';
+                tokenInput.value = '';
+                dataInput.value = '';
+                secretKeyDisplay.innerHTML = '<span class="placeholder">填写参数后，点击「解密」自动生成</span>';
+                resultOutput.innerHTML = '<span class="empty">等待解密...</span>';
+            }
+
+            decryptBtn.addEventListener('click', decrypt);
+            clearBtn.addEventListener('click', clearAll);
+
+            // 支持 Enter 快捷键（在 data 输入框用 Ctrl+Enter 触发）
+            dataInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                    e.preventDefault();
+                    decrypt();
+                }
+            });
+
+            // 检查 CryptoJS.SM4 是否可用
+            if (typeof CryptoJS.SM4 === 'undefined') {
+                // 如果 CDN 加载的 CryptoJS 没有 SM4 模块，加载 sm-crypto 库作为 fallback
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/sm-crypto@0.3.13/dist/sm-crypto.min.js';
+                script.onload = function () {
+                    console.log('sm-crypto loaded as SM4 provider');
+                };
+                script.onerror = function () {
+                    resultOutput.innerHTML = '<span class="error">SM4 加密库加载失败，请检查网络连接。</span>';
+                };
+                document.head.appendChild(script);
+            }
+        })();
+    </script>
+
+    <!-- ============================================================
+         补充 SM4 实现（CryptoJS 自带 SM4 / 或者使用 sm-crypto 作为后备）
+         由于 CryptoJS 标准版不包含 SM4，这里内联一个轻量 SM4 ECB 实现
+    ============================================================ -->
+    <script>
+        (function () {
+            // 如果 CDN 版本的 CryptoJS 没有 SM4，则注入内联实现
+            if (typeof CryptoJS !== 'undefined' && typeof CryptoJS.SM4 === 'undefined') {
+                // ----------------------------------------------------------
+                //  SM4 算法核心 (ECB 模式, PKCS7/PKCS5 Padding)
+                //  参考 GM/T 0002-2012
+                // ----------------------------------------------------------
+                var SM4 = {};
+
+                // S-box
+                var Sbox = [
+                    0xd6, 0x90, 0xe9, 0xfe, 0xcc, 0xe1, 0x3d, 0xb7, 0x16, 0xb6, 0x14, 0xc2, 0x28, 0xfb, 0x2c, 0x05,
+                    0x2b, 0x67, 0x9a, 0x76, 0x2a, 0xbe, 0x04, 0xc3, 0xaa, 0x44, 0x13, 0x26, 0x49, 0x86, 0x06, 0x99,
+                    0x9c, 0x42, 0x50, 0xf4, 0x91, 0xef, 0x98, 0x7a, 0x33, 0x54, 0x0b, 0x43, 0xed, 0xcf, 0xac, 0x62,
+                    0xe4, 0xb3, 0x1c, 0xa9, 0xc9, 0x08, 0xe8, 0x95, 0x80, 0xdf, 0x94, 0xfa, 0x75, 0x8f, 0x3f, 0xa6,
+                    0x47, 0x07, 0xa7, 0xfc, 0xf3, 0x73, 0x17, 0xba, 0x83, 0x59, 0x3c, 0x19, 0xe6, 0x85, 0x4f, 0xa8,
+                    0x68, 0x6b, 0x81, 0xb2, 0x71, 0x64, 0xda, 0x8b, 0xf8, 0xeb, 0x0f, 0x4b, 0x70, 0x56, 0x9d, 0x35,
+                    0x1e, 0x24, 0x0e, 0x5e, 0x63, 0x58, 0xd1, 0xa2, 0x25, 0x22, 0x7c, 0x3b, 0x01, 0x21, 0x78, 0x87,
+                    0xd4, 0x00, 0x46, 0x57, 0x9f, 0xd3, 0x27, 0x52, 0x4c, 0x36, 0x02, 0xe7, 0xa0, 0xc4, 0xc8, 0x9e,
+                    0xea, 0xbf, 0x8a, 0xd2, 0x40, 0xc7, 0x38, 0xb5, 0xa3, 0xf7, 0xf2, 0xce, 0xf9, 0x61, 0x15, 0xa1,
+                    0xe0, 0xae, 0x5d, 0xa4, 0x9b, 0x34, 0x1a, 0x55, 0xad, 0x93, 0x32, 0x30, 0xf5, 0x8c, 0xb1, 0xe3,
+                    0x1d, 0xf6, 0xe2, 0x2e, 0x82, 0x66, 0xca, 0x60, 0xc0, 0x29, 0x23, 0xab, 0x0d, 0x53, 0x4e, 0x6f,
+                    0xd5, 0xdb, 0x37, 0x45, 0xde, 0xfd, 0x8e, 0x2f, 0x03, 0xff, 0x6a, 0x72, 0x6d, 0x6c, 0x5b, 0x51,
+                    0x8d, 0x1b, 0xaf, 0x92, 0xbb, 0xdd, 0xbc, 0x7f, 0x11, 0xd9, 0x5c, 0x41, 0x1f, 0x10, 0x5a, 0xd8,
+                    0x0a, 0xc1, 0x31, 0x88, 0xa5, 0xcd, 0x7b, 0xbd, 0x2d, 0x74, 0xd0, 0x12, 0xb8, 0xe5, 0xb4, 0xb0,
+                    0x89, 0x69, 0x97, 0x4a, 0x0c, 0x96, 0x77, 0x7e, 0x65, 0xb9, 0xf1, 0x09, 0xc5, 0x6e, 0xc6, 0x84,
+                    0x18, 0xf0, 0x7d, 0xec, 0x3a, 0xdc, 0x4d, 0x20, 0x79, 0xee, 0x5f, 0x3e, 0xd7, 0xcb, 0x39, 0x48
+                ];
+
+                // FK
+                var FK = [0xa3b1bac6, 0x56aa3350, 0x677d9197, 0xb27022dc];
+
+                // CK
+                var CK = [];
+                (function () {
+                    for (var i = 0; i < 32; i++) {
+                        var ck = 0;
+                        for (var j = 0; j < 4; j++) {
+                            ck = (ck << 8) | ((28 * i + 7 * j) & 0xff);
+                        }
+                        CK[i] = ck >>> 0;
+                    }
+                })();
+
+                function sm4L1(b) {
+                    return b ^ rotl(b, 2) ^ rotl(b, 10) ^ rotl(b, 18) ^ rotl(b, 24);
+                }
+
+                function sm4L2(b) {
+                    return b ^ rotl(b, 13) ^ rotl(b, 23);
+                }
+
+                function rotl(x, n) {
+                    return ((x << n) | (x >>> (32 - n))) >>> 0;
+                }
+
+                function tau(A) {
+                    var B = 0;
+                    for (var i = 0; i < 4; i++) {
+                        var idx = (A >>> (24 - i * 8)) & 0xff;
+                        B = (B << 8) | Sbox[idx];
+                    }
+                    return B >>> 0;
+                }
+
+                function sm4T(Z) {
+                    return sm4L1(tau(Z));
+                }
+
+                function keyExpansion(keyBytes) {
+                    // keyBytes: Uint8Array (16 bytes)
+                    var MK = [];
+                    for (var i = 0; i < 4; i++) {
+                        MK[i] = ((keyBytes[i * 4] << 24) | (keyBytes[i * 4 + 1] << 16) | (keyBytes[i * 4 + 2] << 8) | keyBytes[i * 4 + 3]) >>> 0;
+                    }
+                    var K = [];
+                    for (var i = 0; i < 4; i++) {
+                        K[i] = (MK[i] ^ FK[i]) >>> 0;
+                    }
+                    var rk = [];
+                    for (var i = 0; i < 32; i++) {
+                        var tmp = (K[i + 1] ^ K[i + 2] ^ K[i + 3] ^ CK[i]) >>> 0;
+                        K[i + 4] = (K[i] ^ sm4L2(tau(tmp))) >>> 0;
+                        rk[i] = K[i + 4];
+                    }
+                    return rk;
+                }
+
+                function sm4EncryptBlock(block, rk) {
+                    // block: Uint8Array (16 bytes)
+                    var X = [];
+                    for (var i = 0; i < 4; i++) {
+                        X[i] = ((block[i * 4] << 24) | (block[i * 4 + 1] << 16) | (block[i * 4 + 2] << 8) | block[i * 4 + 3]) >>> 0;
+                    }
+                    for (var i = 0; i < 32; i++) {
+                        var tmp = (X[i + 1] ^ X[i + 2] ^ X[i + 3] ^ rk[i]) >>> 0;
+                        X[i + 4] = (X[i] ^ sm4T(tmp)) >>> 0;
+                    }
+                    var out = new Uint8Array(16);
+                    for (var i = 0; i < 4; i++) {
+                        var val = X[35 - i];
+                        out[i * 4] = (val >>> 24) & 0xff;
+                        out[i * 4 + 1] = (val >>> 16) & 0xff;
+                        out[i * 4 + 2] = (val >>> 8) & 0xff;
+                        out[i * 4 + 3] = val & 0xff;
+                    }
+                    return out;
+                }
+
+                function sm4DecryptBlock(block, rk) {
+                    // 解密使用逆序轮密钥
+                    var revRk = rk.slice().reverse();
+                    return sm4EncryptBlock(block, revRk);
+                }
+
+                function hexToBytes(hex) {
+                    var len = hex.length / 2;
+                    var bytes = new Uint8Array(len);
+                    for (var i = 0; i < len; i++) {
+                        bytes[i] = parseInt(hex.substr(i * 2, 2), 16);
+                    }
+                    return bytes;
+                }
+
+                function bytesToHex(bytes) {
+                    var hex = '';
+                    for (var i = 0; i < bytes.length; i++) {
+                        hex += ('0' + bytes[i].toString(16)).slice(-2);
+                    }
+                    return hex;
+                }
+
+                function pkcs7Pad(data) {
+                    var padLen = 16 - (data.length % 16);
+                    var padded = new Uint8Array(data.length + padLen);
+                    padded.set(data);
+                    for (var i = data.length; i < padded.length; i++) {
+                        padded[i] = padLen;
+                    }
+                    return padded;
+                }
+
+                function pkcs7Unpad(data) {
+                    var padLen = data[data.length - 1];
+                    if (padLen < 1 || padLen > 16) {
+                        throw new Error('Invalid PKCS7 padding');
+                    }
+                    for (var i = data.length - padLen; i < data.length; i++) {
+                        if (data[i] !== padLen) {
+                            throw new Error('Invalid PKCS7 padding');
+                        }
+                    }
+                    return data.slice(0, data.length - padLen);
+                }
+
+                // ECB 模式加密
+                SM4.encrypt = function (plaintextHex, keyHex) {
+                    if (keyHex.length > 32) keyHex = keyHex.substring(0, 32);
+                    var key = hexToBytes(keyHex);
+                    var rk = keyExpansion(key);
+                    var plainBytes = hexToBytes(plaintextHex);
+                    var padded = pkcs7Pad(plainBytes);
+                    var result = new Uint8Array(padded.length);
+                    for (var i = 0; i < padded.length; i += 16) {
+                        var block = padded.slice(i, i + 16);
+                        var enc = sm4EncryptBlock(block, rk);
+                        result.set(enc, i);
+                    }
+                    return bytesToHex(result);
+                };
+
+                // ECB 模式解密
+                SM4.decrypt = function (ciphertextHex, keyHex) {
+                    if (keyHex.length > 32) keyHex = keyHex.substring(0, 32);
+                    var key = hexToBytes(keyHex);
+                    var rk = keyExpansion(key);
+                    var cipherBytes = hexToBytes(ciphertextHex);
+                    if (cipherBytes.length % 16 !== 0) {
+                        throw new Error('密文长度不是16的倍数');
+                    }
+                    var result = new Uint8Array(cipherBytes.length);
+                    for (var i = 0; i < cipherBytes.length; i += 16) {
+                        var block = cipherBytes.slice(i, i + 16);
+                        var dec = sm4DecryptBlock(block, rk);
+                        result.set(dec, i);
+                    }
+                    var unpadded = pkcs7Unpad(result);
+                    var decoder = new TextDecoder('utf-8');
+                    return decoder.decode(unpadded);
+                };
+
+                // 注册到 CryptoJS
+                CryptoJS.SM4 = {
+                    encrypt: function (message, key, cfg) {
+                        // message: { ciphertext: WordArray } | WordArray | string
+                        var cipherHex;
+                        if (typeof message === 'object' && message.ciphertext) {
+                            cipherHex = CryptoJS.enc.Hex.stringify(message.ciphertext);
+                        } else if (typeof message === 'string') {
+                            cipherHex = message;
+                        } else {
+                            cipherHex = CryptoJS.enc.Hex.stringify(message);
+                        }
+                        var keyHex = CryptoJS.enc.Hex.stringify(key);
+                        return CryptoJS.enc.Hex.parse(SM4.encrypt(cipherHex, keyHex));
+                    },
+                    decrypt: function (message, key, cfg) {
+                        var cipherHex;
+                        if (typeof message === 'object' && message.ciphertext) {
+                            cipherHex = CryptoJS.enc.Hex.stringify(message.ciphertext);
+                        } else if (typeof message === 'string') {
+                            cipherHex = message;
+                        } else {
+                            cipherHex = CryptoJS.enc.Hex.stringify(message);
+                        }
+                        var keyHex = CryptoJS.enc.Hex.stringify(key);
+                        var decryptedText = SM4.decrypt(cipherHex, keyHex);
+                        return CryptoJS.enc.Utf8.parse(decryptedText);
+                    }
+                };
+
+                console.log('内联 SM4 实现已注册到 CryptoJS.SM4');
+            }
+        })();
+    </script>
+</body>
+</html>
